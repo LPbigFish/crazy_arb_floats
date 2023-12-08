@@ -1,3 +1,5 @@
+use std::ptr::slice_from_raw_parts;
+
 fn main() {
     const N: usize = 1000;
 
@@ -17,17 +19,20 @@ struct NotFloat<const N: usize> {
 
 impl<const N: usize> NotFloat<N> {
     fn new(input: &str) -> Self {
-        let negative = input.starts_with('-');
+        //check negativity
+        let negative = input.starts_with("-");
+        //create exponent value
         let exponent = (input.find('.').unwrap_or(input.len()) as isize - input.len() as isize) as i128 + 1;
+        //create buffer
         let mut value = [0u8; N];
-        let mut slice = input.replace(".", "").replace("-", "").replace(" ", "");
+        //create only number String
+        let mut slice = input.chars().filter(|c| c.is_digit(10)).map(|c| c.to_digit(10).expect("How did you fail to parse a simple number?") as u8).collect::<Vec<u8>>();
         let mut binary: Vec<u8> = Vec::new();
 
-        while (slice.len() > 1) || (slice.chars().last().unwrap() != '0') {
-            slice = slice.trim_start_matches('0').to_string();
+        while (slice.len() > 1) || (slice.last().unwrap() != &0u8) {
             let (result, remainder) = Self::divide_str_by_two(&slice);
             binary.push(remainder as u8);
-            slice = result.iter().map(|n| n.to_string()).collect::<String>();
+            slice = result;
         }
         println!("{:?}", binary.as_mut_slice().tap(|v| v.reverse()).into_iter().map(|x| x.to_string()).collect::<String>());
 
@@ -46,14 +51,17 @@ impl<const N: usize> NotFloat<N> {
         }
     }
 
-    fn divide_str_by_two(input: &str) -> (Vec<u8>, bool) {
+    fn divide_str_by_two(input: &Vec<u8>) -> (Vec<u8>, bool) {
         //convert input to a vector of digits
-        let mut slice = input.chars().map(|c| c.to_digit(10).expect("Failed to parse!")).collect::<Vec<u32>>();
+        let mut slice = input.clone();
+        while slice.first().unwrap() == &0u8 {
+            slice.pop();
+        }
         //reverse it
         slice.reverse();
         //create final vector and carry variable
         let mut result = Vec::new();
-        let mut carry = 0u32;
+        let mut carry = 0u8;
 
         //while there are still digits in the input vector
         while !slice.is_empty() {
